@@ -1,68 +1,59 @@
-import {Router} from 'express'
-import {User} from '../models/user'
-import * as fs from "fs";
-const router = Router()
+import {Router} from 'express';
+import {User} from '../models/user';
+const router = Router();
 const express = require("express");
 
 const jsonParser = express.json();
 
-router.get('/',async (req, res) => {
+router.get('/api/user', async (req, res) => {
 
 	try {
 
-		const users = await User.findAll()
+		const users = await User.findAll();
 
-		await res.status(200).sendfile(users)
+		await res.status(200).sendfile(users);
 
 	} catch (e) {
 
-		console.log(e)
+		console.log(e);
 
 		await res.status(500).json({
 			message: 'Server error'
-		})
+		});
 
 	}
-})
+});
 
-router.post('/', jsonParser, function (req, res) {
-	if (!req.body) return res.sendStatus(400)
-
-	var userName = req.body.name
-
-	var userAge = req.body.age
-
-	res.send(User.addUser({name: userName, age: userAge}))
-})
-
-router.put('/api/users', jsonParser, function (req, res) {
-	if (!req.body) return res.sendStatus(400)
-
-	var userId = req.body.id
-	var userName = req.body.name
-	var userAge = req.body.age
-
-	var data = fs.readFileSync('users.json', 'utf8')
-	var users = JSON.parse(data)
-	var user
-	for (var i = 0; i < users.length; i++) {
-		if (users[i].id == userId) {
-			user = users[i]
-			break
-		}
+router.post('/api/user', jsonParser, function (req, res) {
+	if (!req.body) {
+		return res.sendStatus(400);
 	}
-	// изменяем данные у пользователя
-	if (user) {
-		user.age = userAge
-		user.name = userName
-		var data = JSON.stringify(users)
-		fs.writeFileSync('users.json', data)
-		res.send(user)
-	} else {
-		res.status(404).send(user)
-	}
+
+	let userName = req.body.name;
+
+	let userAge = req.body.age;
+
+	let userEmail = req.body.email;
+
+	res.send(User.addUser({name: userName, age: userAge, email: userEmail}));
 })
 
+router.put('/api/user/:id', jsonParser, function (req, res) {
 
+	if (!req.body) {
+		return res.sendStatus(400);
+	}
 
-module.exports = router
+	let userId = req.params.id;
+
+	let userName = req.body.name;
+
+	let userAge = req.body.age;
+
+	let userEmail = req.body.email;
+
+	res.send(User.putUser({id: userId, name: userName, age: userAge, email: userEmail}));
+
+});
+
+module.exports = router;

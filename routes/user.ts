@@ -11,7 +11,7 @@ router.get('/api/user', async (req, res) => {
 
 		const users = await User.findAll();
 
-		await res.status(200).sendfile(users);
+		await res.status(200).send(users);
 
 	} catch (e) {
 
@@ -25,17 +25,12 @@ router.get('/api/user', async (req, res) => {
 });
 
 router.post('/api/user', jsonParser, function (req, res) {
+
 	if (!req.body) {
 		return res.sendStatus(400);
 	}
 
-	let userName = req.body.name;
-
-	let userAge = req.body.age;
-
-	let userEmail = req.body.email;
-
-	res.send(User.addUser({name: userName, age: userAge, email: userEmail}));
+	res.send(User.addUser({name: req.body.name, age: req.body.age, email: req.body.email}));
 })
 
 router.put('/api/user/:id', jsonParser, function (req, res) {
@@ -44,15 +39,7 @@ router.put('/api/user/:id', jsonParser, function (req, res) {
 		return res.sendStatus(400);
 	}
 
-	let userId = req.params.id;
-
-	let userName = req.body.name;
-
-	let userAge = req.body.age;
-
-	let userEmail = req.body.email;
-
-	res.send(User.putUser({id: userId, name: userName, age: userAge, email: userEmail}));
+	res.send(User.putUser({id: req.params.id, name: req.body.name, age: req.body.age, email: req.body.email}));
 
 });
 

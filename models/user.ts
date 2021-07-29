@@ -2,34 +2,42 @@ import * as fs from "fs";
 import validator from 'validator';
 
 export class User {
-	static id: number;
+	constructor(id: number,
+	            userName: string,
+	            age: number,
+	            email: string) {
+		this.id = id;
+		this.name = userName;
+		this.age = age;
+		this.email = email;
+	}
 
-	static userName: string;
-	static age: number;
-	static email: string;
+
+	id: number;
+	name: string;
+	age: number;
+	email: string;
 	enabled: boolean;
 
 
-	static async findAll(): Promise<string> {
-		return 'users.json';
+	static async findAll(): Promise<JSON> {
+		return JSON.parse(fs.readFileSync('users.json', "utf-8"));
 	}
 
-	static async addUser(p: { name: any; age: any; email: any }) {
+	static async addUser(p: { name: string; age: number; email: string }): Promise<JSON> {
 
-		let users = JSON.parse(fs.readFileSync(await this.findAll(), 'utf8'));
+		// const users = JSON.parse()await this.findAll()
+		const users = JSON.parse(fs.readFileSync('users.json', "utf-8"));
 
 		// находим максимальный id
-		let id = users.sort((a, b) => {
+		const id = users.sort((a, b) => {
 			return +b.id - (+a.id);
 		});
 
-		User.id = id[0].id + 1
-		User.userName = p.name;
-		User.age = p.age;
-		User.email = p.email;
+		const user = new User(id[0].id + 1, p.name, p.age, p.email);
 
 		/** Проверка на почту */
-		if (validator.isEmail(User.email)) {
+		if (validator.isEmail(user.email)) {
 
 			console.log('Почта введена корректно');
 
@@ -38,19 +46,6 @@ export class User {
 			throw new Error('Почта была введена некорректно');
 
 		}
-
-		/**
-		 * Очень хотелось сделать через конструктор, но не получилось ;(
-		 * Это костыль?
-		 */
-		let user = {
-
-			id: User.id,
-			name: User.userName,
-			age: User.age,
-			email: User.email
-
-		};
 
 		/** Добавляем пользователя в массив */
 		users.push(user);
@@ -62,13 +57,22 @@ export class User {
 
 		/** перезаписываем файл с новыми данными */
 		fs.writeFileSync('users.json', JSON.stringify(users));
+
+		return users;
 	}
 
-	static async putUser(p: { id: any; name: any; age: any; email: any }) {
+	static async putUser(p: { id: number; name: string; age: number; email: string }): Promise<JSON> {
 
 		/** читаем и парсим все данные */
-		let users = JSON.parse(fs.readFileSync(await this.findAll(), 'utf8'));
+		const users = JSON.parse(fs.readFileSync("users.json", 'utf8'));
 
+		// if (users.find(id => id == p.id)) {
+		// 	users[p.id].age = p.age;
+		// 	users[p.id].name = p.name;
+		// 	users[p.id].email = p.email;
+		// } else {
+		// 	throw new Error("Такого пользоваеля нет")
+		// }
 		for (let i = 0; i < users.length; i++) {
 
 			if (users[i].id == p.id) {
@@ -83,7 +87,13 @@ export class User {
 
 		}
 
+		console.log(users[p.id])
+
+
+
 		fs.writeFileSync('users.json', JSON.stringify(users));
+
+		return users;
 
 	}
 

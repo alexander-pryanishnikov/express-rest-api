@@ -6,6 +6,7 @@ const bodyParser = require('body-parser')
 
 const response_time = require('./middleware/response-time.middleware')
 
+console.log(response_time)
 
 app.use(response_time)
 

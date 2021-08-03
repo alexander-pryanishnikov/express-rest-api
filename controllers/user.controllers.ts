@@ -2,14 +2,11 @@ import {Express} from 'express';
 import {Container, Inject} from 'typescript-ioc';
 import {UserEntity} from '../models/user.entity';
 import {FileService} from '../services/file.service';
-import {get} from "http";
-import * as crypto from "crypto"
 import * as jwt from 'jsonwebtoken'
-
-
-
-
-
+import path from 'path';
+import multer from 'multer'
+import formidable from 'formidable'
+var fs = require('fs-extra');
 const validator = require('validator');
 
 export class UserController {
@@ -17,7 +14,7 @@ export class UserController {
 	@Inject
 	private readonly fileService: FileService = Container.get(FileService);
 
-	public find = (request: Express.Request, response: Express.Response): void => {
+	public find = (request: Express.request, response: Express.Response): void => {
 
 		const users = this.fileService.get();
 
@@ -57,7 +54,6 @@ export class UserController {
 			return response.end();
 		}
 
-		/** Добавляем пользователя в массив */
 		users.push(user);
 
 		/** Сортируем id в JSON файле */
@@ -65,7 +61,6 @@ export class UserController {
 			return a.id - b.id;
 		});
 
-		/** перезаписываем файл с новыми данными */
 		this.fileService.set(users);
 
 		response.json(user);
@@ -73,9 +68,8 @@ export class UserController {
 		return response.end();
 	}
 
-	public update = (request: Express.Request, response: Express.Response): void => {
+	public update = (request: Express.request, response: Express.Response): void => {
 
-		/** читаем и парсим все данные */
 		const users: UserEntity[] = this.fileService.get();
 
 		let current: UserEntity = users.find(user => user.id === parseInt(request.params.id, 0));
@@ -92,17 +86,13 @@ export class UserController {
 
 		this.fileService.set(users);
 
-		response.status(200);
-
-		return response.end();
-
+		return response.json({status: 200});
 	}
 
-	public login = (request: Express.Request, response: Express.Response): void => {
+	public login = (request: Express.request, response: Express.Response): void => {
 
 		const body: Partial<UserEntity> = request.body;
 
-		/** читаем и парсим все данные */
 		const users: UserEntity[] = this.fileService.get();
 
 		let current: UserEntity = users.find(user => user.id === parseInt(request.body.id, 0));
@@ -113,41 +103,73 @@ export class UserController {
 
 			const tokenKey = '1a2b-3c4d-5e6f-7g8h'
 
-			// let head = Buffer.from(
-			// 	JSON.stringify({alg: 'HS256', typ: 'jwt'})
-			// ).toString('base64')
-			// let body = Buffer.from(JSON.stringify(current)).toString(
-			// 	'base64'
-			// )
-			// let signature = crypto
-			// 	.createHmac('SHA256', tokenKey)
-			// 	.update(`${head}.${body}`)
-			// 	.digest('base64')
-			//
-			// current.token = `${head}.${body}.${signature}`
+			current.token = jwt.sign({exp: 1800, id: current.id}, tokenKey)
 
-			current.token = jwt.sign({ exp: 1800, id: current.id }, tokenKey)
-
-			console.log(Math.floor(Date.now() / 1000) + (60 * 60))
+			console.log(Math.floor(Date.now() / 1000) + (60 * 60));
 
 			this.fileService.set(users);
 
 			return response.status(200).json({
+
 				id: current.id,
 				email: current.email,
 				token: current.token
-			})
+
+			});
 
 		} else {
 
 			response.status(412);
-			response.json({message: 'Неправильная почта или пароль'})
+			response.json({message: 'Неправильная почта или пароль'});
 			return response.end();
 
 		}
 	}
 
+	public upload = (request: Express.request, response: Express.Response, next): void => {
 
+		const form = formidable({multiples: true});
+
+		form.parse(request, async (err, fields, files) => {
+
+			if (err) {
+
+				next(err);
+
+				return;
+			}
+
+			const file = files['data'];
+
+			const f = fs.readFileSync(file.path);
+
+			let filename = Buffer.from(file.name).toString('base64');
+
+			await fs.promises.writeFile(path.join(__dirname, '../', `/uploads/${filename}`), f)
+
+			return response.json({status: 200});
+
+		});
+
+	}
+
+	public download = (request: Express.request, response: Express.Response): void => {
+
+		const file = request.params.name;
+
+		let filename = Buffer.from(file).toString('base64');
+
+		console.log(filename);
+
+		let buff = Buffer.from(path.resolve(`./uploads/${filename.toString()}`), 'base64');
+
+		// console.log(path.resolve(`./uploads/${filename}`))
+
+		return response.download(buff);
+
+		// readFileSync('./upload/qwe', 'utf-8')
+
+	}
 }
 
 

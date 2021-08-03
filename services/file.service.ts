@@ -2,7 +2,6 @@ import {readFile, readFileSync, writeFileSync} from "fs";
 import { Singleton } from 'typescript-ioc';
 import { UserEntity } from '../models/user.entity'
 
-
 @Singleton
 export class FileService {
 
@@ -15,6 +14,5 @@ export class FileService {
 	public set(users: UserEntity[]): void {
 		writeFileSync(this.path, JSON.stringify(users))
 	}
-
 
 }

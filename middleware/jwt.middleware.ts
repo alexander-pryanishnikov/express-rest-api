@@ -1,7 +1,10 @@
+import jwt from 'jsonwebtoken'
 import {UserEntity} from "../models/user.entity";
+import {FileService} from '../services/file.service';
+import {Container} from "typescript-ioc";
 import {readFileSync} from "fs";
 
-export const tokenKey = '1a2b-3c4d-5e6f-7g8h'
+const tokenKey = '1a2b-3c4d-5e6f-7g8h'
 
 const users: UserEntity[] = JSON.parse(readFileSync("users.json", 'utf-8'));
 
@@ -28,25 +31,19 @@ const jwtMiddleware = app.use((req, res, next) => {
 				} else if (payload) {
 
 					if (user === payload.id) {
-
-						req.user = user
-						next()
-
+							req.user = user
+							next()
 					}
 
 					if (!req.user) {
-
 						next();
-
 					}
-
 				}
 			}
 		);
 	}
 
 	next();
-
 });
 
 module.exports = jwtMiddleware

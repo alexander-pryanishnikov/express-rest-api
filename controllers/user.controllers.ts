@@ -24,14 +24,35 @@ export class UserController {
          * То есть, мы возвращаем всех пользователей с их паролями и токенами?
          * Не безопасно
          * */
-        const users = this.fileService.get();
+        /** + */
+        const current_users = this.fileService.get();
 
-        response.json(users);
+        const users = JSON.stringify(current_users, function(key, value) {
+            if (key == 'password' ) {
+                return undefined; // удаляем все строковые свойства
+            } else if (key == 'token') {
+                return  undefined;
+            }
+            return value;
+        })
+
+        response.json(JSON.parse(users));
 
         return response.end();
     }
 
     public create = (request: Express.Reequest, response: Express.Response): void => {
+
+        const user = new UserEntity();
+
+        /** Проверка на почту */
+        /** TODO: [VT] 04.08.2021, 16:50: Выполнено уже много действий и тут мы решаем проверить на корректность email. Такие проверки надо делать в начале */
+        /** + */
+        if (!validator.isEmail(user.email)) {
+            response.status(412);
+            response.json({message: 'Почта введена некорректно'})
+            return response.end();
+        }
 
         const body: Partial<UserEntity> = request.body;
 
@@ -45,32 +66,25 @@ export class UserController {
 
         // находим максимальный id
 		/** TODO: [VT] 04.08.2021, 16:49: Можно проще через reduce или Math */
-        const id: number = users.sort((a, b) => {
-            return +b.id - (+a.id);
-        }).find((v, i) => i === 0).id;
 
-        const user = new UserEntity();
 
-        user.id = id + 1;
-        user.email = request.body.email;
-        user.name = request.body.name;
-        user.password = request.body.password;
+        // const id: number = users.sort((a, b) => {
+        //     return +b.id - (+a.id);
+        // }).find((v, i) => i === 0).id;
 
-        /** Проверка на почту */
-		/** TODO: [VT] 04.08.2021, 16:50: Выполнено уже много действий и тут мы решаем проверить на корректность email. Такие проверки надо делать в начале */
-        if (!validator.isEmail(user.email)) {
-            response.status(412);
-            response.json({message: 'Почта введена некорректно'})
-            return response.end();
-        }
 
-        users.push(user);
+        // user.id = id + 1;
+        // user.email = request.body.email;
+        // user.name = request.body.name;
+        // user.password = request.body.password;
+        //
+        // users.push(user);
 
 		/** TODO: [VT] 04.08.2021, 16:52: Сортировка по факту не нужна */
         /** Сортируем id в JSON файле */
-        users.sort(function (a, b) {
-            return a.id - b.id;
-        });
+        // users.sort(function (a, b) {
+        //     return a.id - b.id;
+        // });
 
         this.fileService.set(users);
 

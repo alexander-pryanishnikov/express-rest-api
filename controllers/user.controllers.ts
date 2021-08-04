@@ -1,13 +1,11 @@
 import {Express} from 'express';
+import formidable from 'formidable'
+import * as jwt from 'jsonwebtoken'
+import path from 'path';
 import {Container, Inject} from 'typescript-ioc';
 import {UserEntity} from '../models/user.entity';
 import {FileService} from '../services/file.service';
-import * as jwt from 'jsonwebtoken'
-import path from 'path';
-import multer from 'multer'
-import formidable from 'formidable'
-import {log} from "util";
-import {readFileSync} from "fs";
+
 var fs = require('fs-extra');
 const mime = require('mime');
 const validator = require('validator');
@@ -17,160 +15,172 @@ const tokenKey = '1a2b-3c4d-5e6f-7g8h'
 
 export class UserController {
 
-	@Inject
-	private readonly fileService: FileService = Container.get(FileService);
+    @Inject
+    private readonly fileService: FileService = Container.get(FileService);
 
-	public find = (request: Express.request, response: Express.Response): void => {
+    public find = (request: Express.request, response: Express.Response): void => {
 
-		const users = this.fileService.get();
+        /** TODO: [VT] 04.08.2021, 16:48:
+         * То есть, мы возвращаем всех пользователей с их паролями и токенами?
+         * Не безопасно
+         * */
+        const users = this.fileService.get();
 
-		response.json(users);
+        response.json(users);
 
-		return response.end();
-	}
+        return response.end();
+    }
 
-	public create = (request: Express.Reequest, response: Express.Response): void => {
+    public create = (request: Express.Reequest, response: Express.Response): void => {
 
-		const body: Partial<UserEntity> = request.body;
+        const body: Partial<UserEntity> = request.body;
 
-		if (!body.email || !body.name || !body.password) {
-			response.status(412);
-			response.json({message: 'Нет email или name или пароля'})
-			return response.end();
-		}
+        if (!body.email || !body.name || !body.password) {
+            response.status(412);
+            response.json({message: 'Нет email или name или пароля'})
+            return response.end();
+        }
 
-		const users: UserEntity[] = this.fileService.get();
+        const users: UserEntity[] = this.fileService.get();
 
-		// находим максимальный id
-		const id: number = users.sort((a, b) => {
-			return +b.id - (+a.id);
-		}).find((v, i) => i === 0).id;
+        // находим максимальный id
+		/** TODO: [VT] 04.08.2021, 16:49: Можно проще через reduce или Math */
+        const id: number = users.sort((a, b) => {
+            return +b.id - (+a.id);
+        }).find((v, i) => i === 0).id;
 
-		const user = new UserEntity();
+        const user = new UserEntity();
 
-		user.id = id + 1;
-		user.email = request.body.email;
-		user.name = request.body.name;
-		user.password = request.body.password;
+        user.id = id + 1;
+        user.email = request.body.email;
+        user.name = request.body.name;
+        user.password = request.body.password;
 
-		/** Проверка на почту */
-		if (!validator.isEmail(user.email)) {
-			response.status(412);
-			response.json({message: 'Почта введена некорректно'})
-			return response.end();
-		}
+        /** Проверка на почту */
+		/** TODO: [VT] 04.08.2021, 16:50: Выполнено уже много действий и тут мы решаем проверить на корректность email. Такие проверки надо делать в начале */
+        if (!validator.isEmail(user.email)) {
+            response.status(412);
+            response.json({message: 'Почта введена некорректно'})
+            return response.end();
+        }
 
-		users.push(user);
+        users.push(user);
 
-		/** Сортируем id в JSON файле */
-		users.sort(function (a, b) {
-			return a.id - b.id;
-		});
+		/** TODO: [VT] 04.08.2021, 16:52: Сортировка по факту не нужна */
+        /** Сортируем id в JSON файле */
+        users.sort(function (a, b) {
+            return a.id - b.id;
+        });
 
-		this.fileService.set(users);
+        this.fileService.set(users);
 
-		response.json(user);
+        response.json(user);
 
-		return response.end();
-	}
+		/** TODO: [VT] 04.08.2021, 16:54: Статус ответа? */
+        return response.end();
+    }
 
-	public update = (request: Express.request, response: Express.Response): void => {
+    public update = (request: Express.request, response: Express.Response): void => {
 
-		const users: UserEntity[] = this.fileService.get();
+        const users: UserEntity[] = this.fileService.get();
 
-		let current: UserEntity = users.find(user => user.id === parseInt(request.params.id, 0));
+        let current: UserEntity = users.find(user => user.id === parseInt(request.params.id, 0));
 
-		if (!current) {
-			response.status(412);
-			response.json({message: 'Пользователь не найден'})
-			return response.end();
-		}
+        if (!current) {
+            response.status(412);
+            response.json({message: 'Пользователь не найден'})
+            return response.end();
+        }
 
-		const body: Partial<UserEntity> = request.body;
+        const body: Partial<UserEntity> = request.body;
 
-		Object.assign(current, body);
+		/** TODO: [VT] 04.08.2021, 16:53: Не должно быть возможности изменить пароль и токен. +Проверка на занятый и корректный email */
+        Object.assign(current, body);
 
-		this.fileService.set(users);
+        this.fileService.set(users);
 
-		return response.json({status: 200});
-	}
+        return response.json({status: 200});
+    }
 
-	public login = (request: Express.request, response: Express.Response): void => {
+    public login = (request: Express.request, response: Express.Response): void => {
 
-		const body: Partial<UserEntity> = request.body;
+        const body: Partial<UserEntity> = request.body;
 
-		const users: UserEntity[] = this.fileService.get();
+        const users: UserEntity[] = this.fileService.get();
 
-		let current: UserEntity = users.find(user => user.id === parseInt(request.body.id, 0));
+		/** TODO: [VT] 04.08.2021, 16:55: Зачем обращаться к request если уже есть body */
+        let current: UserEntity = users.find(user => user.id === parseInt(request.body.id, 0));
 
-		if (body.email == current.email && body.password == current.password) {
+        if (body.email == current.email && body.password == current.password) {
 
-			console.log("Данные корректны")
+            console.log("Данные корректны")
 
+            const tokenKey = '1a2b-3c4d-5e6f-7g8h'
 
-			current.token = jwt.sign({exp: 1800, id: current.id}, tokenKey)
+            /** TODO: [VT] 04.08.2021, 16:56: exp - эта метка времени (т.е. сейчас + 4 часа должно быть) */
+            current.token = jwt.sign({exp: 1800, id: current.id}, tokenKey)
 
-			console.log(Math.floor(Date.now() / 1000) + (60 * 60));
+            console.log(Math.floor(Date.now() / 1000) + (60 * 60));
 
-			this.fileService.set(users);
+            this.fileService.set(users);
 
-			return response.json({status: 200});
-			// return response.status(200).json({
-			//
-			// 	id: current.id,
-			// 	email: current.email,
-			// 	token: current.token
-			//
-			// });
+            return response.status(200).json({
 
-		} else {
+                id: current.id,
+                email: current.email,
+                token: current.token
 
-			response.status(412);
-			response.json({message: 'Неправильная почта или пароль'});
-			return response.end();
+            });
 
-		}
-	}
+        } else {
 
-	public upload = (request: Express.request, response: Express.Response, next): void => {
+            response.status(412);
+            response.json({message: 'Неправильная почта или пароль'});
+            return response.end();
 
-			const form = formidable({multiples: true});
+        }
+    }
 
-			form.parse(request, async (err, fields, files) => {
+    public upload = (request: Express.request, response: Express.Response, next): void => {
 
-				if (err) {
+        const form = formidable({multiples: true});
 
-					next(err);
+        form.parse(request, async (err, fields, files) => {
 
-					return;
+            if (err) {
 
-				}
+                next(err);
 
-				const file = files['data'];
+                return;
 
-				const f = fs.readFileSync(file.path);
-				let filename = Buffer.from(file.name).toString('base64');
+            }
 
-				await fs.promises.writeFile(path.join(__dirname, '../', `/uploads/${filename}`), f)
+            const file = files['data'];
 
-				return response.json({status: 200});
+            const f = fs.readFileSync(file.path);
 
-			});
+            let filename = Buffer.from(file.name).toString('base64');
 
-	}
+            await fs.promises.writeFile(path.join(__dirname, '../', `/uploads/${filename}`), f)
 
-	public download = (request: Express.request, response: Express.Response): void => {
+            return response.json({status: 200});
 
-		let filename = Buffer.from(request.params.name).toString('base64');
+        });
 
-		let buff = Buffer.from(path.basename(`./uploads/${filename.toString()}`), 'base64');
+    }
 
-		response.set('Content-Disposition', `attachment; filename="${buff}"`)
-		response.set('Content-Type', mime.lookup(path.basename(`./uploads/${filename.toString()}`)))
+    public download = (request: Express.request, response: Express.Response): void => {
 
-		response.send(fs.readFileSync(filename))
+        let filename = Buffer.from(request.params.name).toString('base64');
 
-	}
+        let buff = Buffer.from(path.basename(`./uploads/${filename.toString()}`), 'base64');
+
+        response.set('Content-Disposition', `attachment; filename="${buff}"`)
+        response.set('Content-Type', mime.lookup(path.basename(`./uploads/${filename.toString()}`)))
+
+        response.send(fs.readFileSync(path.resolve(`./dist/uploads/${filename.toString()}`)))
+
+    }
 }
 
 

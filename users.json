@@ -1,9 +1,23 @@
 [
   {
     "id": 7,
-    "email": "qwe@qwe.u",
-    "name": "Alex",
+    "email": "qwe@qwe.ru",
+    "name": "Alwx",
     "password": "123",
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MjgxODM3MTYsImlkIjo3LCJpYXQiOjE2MjgxNjkzMTZ9.A1BKGoOCgNOcFYEcdVKfsVfEAhJcXMdolEwaScfwHfw"
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MjgxOTAzNjcsImlkIjo3LCJpYXQiOjE2MjgxNzU5Njd9.7Mn3Bdy6nKZCy9-NUApSnmJJo7F9VWIuSBiv_S6nVPQ"
+  },
+  {
+    "id": 8,
+    "email": "test@mail.ru",
+    "name": "qwe",
+    "password": "qwe",
+    "enabled": true
+  },
+  {
+    "id": 9,
+    "email": "test@mail.ru",
+    "name": "qwe",
+    "password": "76d80224611fc919a5d54f0ff9fba446",
+    "enabled": true
   }
 ]

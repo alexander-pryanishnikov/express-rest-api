@@ -9,6 +9,8 @@ import {FileService} from '../services/file.service';
 var fs = require('fs-extra');
 const mime = require('mime');
 const validator = require('validator');
+const md5 = require('md5');
+
 
 export class UserController {
 
@@ -53,7 +55,8 @@ export class UserController {
 		user.id = id + 1;
 		user.email = body.email;
 		user.name = body.name;
-		user.password = body.password;
+		user.password = md5(body.password);
+		user.enabled = true;
 
 		users.push(user);
 
@@ -61,10 +64,11 @@ export class UserController {
 
 		response.json(user);
 
-		return response.status(201);
+		return response.status(201).send();
 	}
 
 	public update = (request: Express.request, response: Express.Response): void => {
+
 
 		const body: Partial<UserEntity> = request.body;
 
@@ -83,7 +87,7 @@ export class UserController {
 			response.json({message: 'Пользователь с такой почтой уже существует'});
 			return response.end();
 
-		} else if (!validator.isEmail(user.email)) {
+		} else if (body.email && !validator.isEmail(body.email)) {
 
 			response.status(412);
 			response.json({message: 'Почта введена некорректно'});
@@ -91,13 +95,16 @@ export class UserController {
 
 		}
 
-		/** TODO: [VT] 04.08.2021, 16:53: Не должно быть возможности изменить пароль и токен. */
+		/** TODO: + [VT] 04.08.2021, 16:53: Не должно быть возможности изменить пароль и токен. */
+		delete body.token
+		delete body.password
+
 		Object.assign(user, body);
 
 		this.fileService.set(users);
 
-		/** TODO: [VT] 05.08.2021, 16:49: status */
-		return response.json({status: 200});
+		/** TODO: + [VT] 05.08.2021, 16:49: status */
+		return response.status(200).send();
 	}
 
 	public login = (request: Express.request, response: Express.Response): void => {
@@ -112,8 +119,8 @@ export class UserController {
 			return response.status(404)
 		}
 
-		/** TODO: [VT] 05.08.2021, 16:51: Строгое сравнение + md5 */
-		if (body.password == current.password) {
+		/** TODO: + [VT] 05.08.2021, 16:51: Строгое сравнение + md5 */
+		if (md5(body.password) === current.password) {
 
 			console.log("Данные корректны")
 

@@ -8,6 +8,7 @@ const router = Router();
 
 const userController: UserController = Container.get(UserController);
 
+/** TODO: [VT] 05.08.2021, 17:06: Закрыть все роуты jwt, кроме логина */
 router.get('/api/user', [jwt], userController.find);
 
 router.post('/api/user', userController.create);

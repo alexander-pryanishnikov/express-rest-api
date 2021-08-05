@@ -1,63 +1,72 @@
 import {getDefaultSettings} from "http2";
 import jwt from 'jsonwebtoken'
-import {UserEntity} from "../models/user.entity";
-import {FileService} from '../services/file.service';
 import {Container} from "typescript-ioc";
-import {readFileSync} from "fs";
-import {json} from "express";
+import {FileService} from '../services/file.service';
 
 const tokenKey = '1a2b-3c4d-5e6f-7g8h'
-
-/** TODO: [VT] 04.08.2021, 17:07: Есть сервис для получения списка пользователей + */
 
 const fileService: FileService = Container.get(FileService);
 
 const users = fileService.get()
 
-const express = require("express");
-const app = express();
-
-
-
-/** TODO: [VT] 04.08.2021, 17:08: Мы можем просто экспортировать метод, а подключать мидлвару уже по факту + */
 const jwtMiddleware = (req, res, next) => {
 
-	/** TODO: [VT] 04.08.2021, 17:09: Почему let? + */
-	const user = users.find(user => user.id === parseInt(req.body.id, 0))
+    /** TODO: [VT] 05.08.2021, 17:00: Работать с токеном */
+    const token = req.headers['authorization'];
 
-	if (req.headers.authorization) {
+    /** TODO: [VT] 05.08.2021, 17:02: there is not token */
 
-		jwt.verify(
+    const user = users.find(user => user.id === parseInt(req.body.id, 0))
 
-			req.headers.authorization.split(' ')[1],
-			tokenKey,
+    /** TODO: [VT] 05.08.2021, 17:02: token not found */
 
-			(err, payload) => {
+    if (req.headers.authorization) {
 
-				if (err) {
+        /** TODO: [VT] 05.08.2021, 17:02: verify - выбрасывает исключение
+         *
+         * try {
+              jwt.verify(token, 'wrong-secret');
 
-					next();
+              // payload.id === user
 
-				} else if (payload) {
+              next()
+            } catch(err) {
+              // err
+              403
+            }
+         *
+         * */
 
-					/** TODO: [VT] 04.08.2021, 17:10: Объект === number ??? ? */
-					if (user === payload.id) {
-							req.user = user
-							next()
-					}
 
-					if (!req.user) {
-						next();
-					}
-				}
-			}
-		);
-	} else {
-		return res.status(403);
-	}
+        jwt.verify(
+            req.headers.authorization.split(' ')[1],
+            tokenKey,
 
-	/** TODO: [VT] 04.08.2021, 17:10: Мидлвара пропускает в любом случае дальше? Где 403? + */
-	next();
+            (err, payload) => {
+
+                if (err) {
+
+                    next();
+
+                } else if (payload) {
+
+                    /** TODO: [VT] 04.08.2021, 17:10: Объект === number ??? ? */
+                    if (user === payload.id) {
+                        req.user = user
+                        next()
+                    }
+
+                    if (!req.user) {
+                        next();
+                    }
+                }
+            }
+        );
+    } else {
+        return res.status(403);
+    }
+
+    next();
 };
 
 module.exports = jwtMiddleware

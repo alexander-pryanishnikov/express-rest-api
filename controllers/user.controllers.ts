@@ -17,10 +17,9 @@ export class UserController {
 
 	public find = (request: Express.request, response: Express.Response): void => {
 
-		/** TODO: [VT] 05.08.2021, 14:16: camelCase */
+
 		const currentUsers = this.fileService.get();
 
-		/** TODO: [VT] 05.08.2021, 14:16: Результат сразу в ответ клади, без переменной + */
 		response.json(currentUsers.map(user => {
 			delete user.token
 			delete user.password
@@ -62,7 +61,6 @@ export class UserController {
 
 		response.json(user);
 
-		/** TODO: [VT] 05.08.2021, 14:17: Статус устанавливается через .status(201) и на создание нужен статус 201 + */
 		return response.status(201);
 	}
 
@@ -72,32 +70,33 @@ export class UserController {
 
 		const users: UserEntity[] = this.fileService.get();
 
-		/** TODO: [VT] 05.08.2021, 14:18: String(body.id) - id пользователя мы берем не из тела, а из req.params.id + */
 		let user: UserEntity = users.find(user => user.id === parseInt(String(request.params.id), 0));
 
-		/** TODO: [VT] 05.08.2021, 14:19: Если почту не передали, её и проверять не нужно
-		 * Тут идёт проверка на правильный формат почты (test@mail.ru)*/
-		if (!validator.isEmail(!user)) {
+		if (!user) {
+
 			response.status(412);
 			response.json({message: 'Пользователь не найден'})
 			return response.end();
-			/** TODO: [VT] 05.08.2021, 14:19: Данная проверка не имеет смысла + */
-			/** TODO: [VT] 05.08.2021, 14:20: Использовать надо строгое равенство + */
-		} else if (body.email === user.email) {
+
+		} else if (body.email && users.find(u => u.email === body.email && u.id !== +request.params.id)) {
+
 			response.json({message: 'Пользователь с такой почтой уже существует'});
 			return response.end();
-			/** TODO: [VT] 05.08.2021, 14:21: Совсем не тут надо проверять, нашелся ли у нас такой пользователь + */
-		} else if (body.email) {
+
+		} else if (!validator.isEmail(user.email)) {
+
 			response.status(412);
 			response.json({message: 'Почта введена некорректно'});
 			return response.end();
+
 		}
 
-		/** TODO: [VT] 04.08.2021, 16:53: Не должно быть возможности изменить пароль и токен. +Проверка на занятый и корректный email */
+		/** TODO: [VT] 04.08.2021, 16:53: Не должно быть возможности изменить пароль и токен. */
 		Object.assign(user, body);
 
 		this.fileService.set(users);
 
+		/** TODO: [VT] 05.08.2021, 16:49: status */
 		return response.json({status: 200});
 	}
 
@@ -107,34 +106,21 @@ export class UserController {
 
 		const users: UserEntity[] = this.fileService.get();
 
-		/** TODO: [VT] 04.08.2021, 16:55: Зачем обращаться к request если уже есть body +
-		 * +*/
-		/** TODO: [VT] 05.08.2021, 14:22: В body будет только email и password, никакого ID  +*/
+		const current: UserEntity = users.find(user => user.email === body.email);
 
-		let current: UserEntity = users.find(user => user.email === String(body.email), 0);
-
-		/** TODO: [VT] 05.08.2021, 14:22: Тут можно проверить, нашелся ли current (user), если не нашелся -> 404 - Пользователь не существует + */
 		if (!current) {
 			return response.status(404)
 		}
 
-		if (body.email == current.email && body.password == current.password) {
+		/** TODO: [VT] 05.08.2021, 16:51: Строгое сравнение + md5 */
+		if (body.password == current.password) {
 
 			console.log("Данные корректны")
 
 			const tokenKey = '1a2b-3c4d-5e6f-7g8h'
 
-			/** TODO: [VT] 04.08.2021, 16:56: exp - эта метка времени (т.е. сейчас + 4 часа должно быть)
-			 * + */
-			/** TODO: [VT] 05.08.2021, 14:24: "+ 4 часа" имелось ввиду в милисекунды. Что будет если к 1628162667774 прибавить строковую константу? + */
-			/** TODO: [VT] 05.08.2021, 14:27:
-			 * Читай https://www.npmjs.com/package/jsonwebtoken#
-			 * Поиск по странице: "Signing a token with 1 hour of expiration:"
-			 *
-			 * */
-			current.token = jwt.sign({exp: Math.floor(Date.now() / 1000) + (60 * 240), id: current.id}, tokenKey)
+			current.token = jwt.sign({exp: Math.floor(Date.now() / 1000) + (60 * 60) * 4, id: current.id}, tokenKey)
 
-			/** TODO: [VT] 05.08.2021, 14:28: Забрали данные из файла и сохранили обратно, ничего не сделав с ними*/
 			this.fileService.set(users);
 
 			return response.status(200).json({
@@ -147,7 +133,6 @@ export class UserController {
 
 		} else {
 
-			/** TODO: [VT] 05.08.2021, 14:28: По заданию такой статус ошибки должен приходить? + */
 			response.status(401);
 			response.json({message: 'Неправильная почта или пароль'});
 			return response.end();

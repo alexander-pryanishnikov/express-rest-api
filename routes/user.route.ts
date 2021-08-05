@@ -14,7 +14,7 @@ router.post('/api/user', userController.create);
 
 router.put('/api/user/:id', userController.update);
 
-router.post('/api/user/login',[jwt], userController.login);
+router.post('/api/user/login', userController.login);
 
 router.post('/api/file' ,userController.upload)
 

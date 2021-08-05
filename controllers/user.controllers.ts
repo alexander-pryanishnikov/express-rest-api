@@ -43,16 +43,10 @@ export class UserController {
 
     public create = (request: Express.Reequest, response: Express.Response): void => {
 
-        const user = new UserEntity();
 
         /** Проверка на почту */
         /** TODO: [VT] 04.08.2021, 16:50: Выполнено уже много действий и тут мы решаем проверить на корректность email. Такие проверки надо делать в начале */
         /** + */
-        if (!validator.isEmail(user.email)) {
-            response.status(412);
-            response.json({message: 'Почта введена некорректно'})
-            return response.end();
-        }
 
         const body: Partial<UserEntity> = request.body;
 
@@ -62,25 +56,33 @@ export class UserController {
             return response.end();
         }
 
+        if (!validator.isEmail(body.email)) {
+            response.status(412);
+            response.json({message: 'Почта введена некорректно'})
+            return response.end();
+        }
+
         const users: UserEntity[] = this.fileService.get();
 
         // находим максимальный id
 		/** TODO: [VT] 04.08.2021, 16:49: Можно проще через reduce или Math */
 
 
-        // const id: number = users.sort((a, b) => {
-        //     return +b.id - (+a.id);
-        // }).find((v, i) => i === 0).id;
+        const id: number = users.sort((a, b) => {
+            return +b.id - (+a.id);
+        }).find((v, i) => i === 0).id;
 
+        const user = new UserEntity();
 
-        // user.id = id + 1;
-        // user.email = request.body.email;
-        // user.name = request.body.name;
-        // user.password = request.body.password;
-        //
-        // users.push(user);
+        user.id = id + 1;
+        user.email = request.body.email;
+        user.name = request.body.name;
+        user.password = request.body.password;
 
-		/** TODO: [VT] 04.08.2021, 16:52: Сортировка по факту не нужна */
+        users.push(user);
+
+		/** TODO: [VT] 04.08.2021, 16:52: Сортировка по факту не нужна
+     * Массив идёт с большего к меньшему id, а не наоборот*/
         /** Сортируем id в JSON файле */
         // users.sort(function (a, b) {
         //     return a.id - b.id;
@@ -91,7 +93,7 @@ export class UserController {
         response.json(user);
 
 		/** TODO: [VT] 04.08.2021, 16:54: Статус ответа? */
-        return response.end();
+        return response.json({status: 200});
     }
 
     public update = (request: Express.request, response: Express.Response): void => {
@@ -122,8 +124,9 @@ export class UserController {
 
         const users: UserEntity[] = this.fileService.get();
 
-		/** TODO: [VT] 04.08.2021, 16:55: Зачем обращаться к request если уже есть body */
-        let current: UserEntity = users.find(user => user.id === parseInt(request.body.id, 0));
+		/** TODO: [VT] 04.08.2021, 16:55: Зачем обращаться к request если уже есть body
+     * +*/
+        let current: UserEntity = users.find(user => user.id === parseInt(String(body.id), 0));
 
         if (body.email == current.email && body.password == current.password) {
 
@@ -132,7 +135,7 @@ export class UserController {
             const tokenKey = '1a2b-3c4d-5e6f-7g8h'
 
             /** TODO: [VT] 04.08.2021, 16:56: exp - эта метка времени (т.е. сейчас + 4 часа должно быть) */
-            current.token = jwt.sign({exp: 1800, id: current.id}, tokenKey)
+            current.token = jwt.sign({exp: Data, id: current.id}, tokenKey)
 
             console.log(Math.floor(Date.now() / 1000) + (60 * 60));
 

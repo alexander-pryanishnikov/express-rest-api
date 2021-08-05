@@ -8,7 +8,7 @@ const router = Router();
 
 const userController: UserController = Container.get(UserController);
 
-router.get('/api/user', userController.find);
+router.get('/api/user', [jwt], userController.find);
 
 router.post('/api/user', userController.create);
 

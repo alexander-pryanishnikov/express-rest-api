@@ -12,6 +12,8 @@ const mime = require('mime');
 const validator = require('validator');
 const md5 = require('md5');
 
+/** TODO: + [VT] 06.08.2021, 12:52: Не тут */
+const tokenKey = '1a2b-3c4d-5e6f-7g8h'
 
 export class UserController {
 
@@ -36,19 +38,25 @@ export class UserController {
 
 		const body: Partial<UserEntity> = request.body;
 
+		const users: UserEntity[] = this.fileService.get();
+
 		if (!body.email || !body.name || !body.password) {
 			response.status(412);
 			response.json({message: 'Нет email или name или пароля'})
 			return response.end();
 
-			/** TODO: [VT] 06.08.2021, 12:49: Проверка на занятый email */
+			/** TODO: + [VT] 06.08.2021, 12:49: Проверка на занятый email */
+		} else if (body.email && users.find(u => u.email === body.email && u.id !== +request.params.id)) {
+
+			response.json({message: 'Пользователь с такой почтой уже существует'});
+			return response.end();
+
 		} else if (!validator.isEmail(body.email)) {
 			response.status(412);
 			response.json({message: 'Почта введена некорректно'})
 			return response.end();
 		}
 
-		const users: UserEntity[] = this.fileService.get();
 
 		const id = Math.max(...users.map(user => user.id))
 
@@ -64,8 +72,9 @@ export class UserController {
 
 		this.fileService.set(users);
 
-		/** TODO: [VT] 06.08.2021, 12:50: В ответе не должно пароля */
-		response.json(user);
+		/** TODO: + [VT] 06.08.2021, 12:50: В ответе не должно пароля */
+		delete user.password
+		response.send(user);
 
 		return response.status(201).send();
 	}
@@ -117,17 +126,18 @@ export class UserController {
 		const current: UserEntity = users.find(user => user.email === body.email);
 
 		if (!current) {
-			/** TODO: [VT] 06.08.2021, 12:52: Описать ошибку */
-			return response.status(404)
+			/** TODO: + [VT] 06.08.2021, 12:52: Описать ошибку */
+			return response.status(404).send("Пользователь не найден")
 		}
 
-		/** TODO: [VT] 06.08.2021, 12:48: Проверять user.enabled */
+		/** TODO: + [VT] 06.08.2021, 12:48: Проверять user.enabled */
+		if(!current.enabled) {
+			return response.status(403).send("Пользователь заблокирован")
+		}
+
 		if (md5(body.password) === current.password) {
 
 			console.log("Данные корректны")
-
-			/** TODO: [VT] 06.08.2021, 12:52: Не тут */
-			const tokenKey = '1a2b-3c4d-5e6f-7g8h'
 
 			current.token = jwt.sign({exp: Math.floor(Date.now() / 1000) + (60 * 60) * 4, id: current.id}, tokenKey)
 

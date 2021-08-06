@@ -3,6 +3,7 @@ import formidable from 'formidable'
 import * as jwt from 'jsonwebtoken'
 import path from 'path';
 import {Container, Inject} from 'typescript-ioc';
+import {log} from "util";
 import {UserEntity} from '../models/user.entity';
 import {FileService} from '../services/file.service';
 
@@ -18,7 +19,6 @@ export class UserController {
 	private readonly fileService: FileService = Container.get(FileService);
 
 	public find = (request: Express.request, response: Express.Response): void => {
-
 
 		const currentUsers = this.fileService.get();
 
@@ -40,6 +40,8 @@ export class UserController {
 			response.status(412);
 			response.json({message: 'Нет email или name или пароля'})
 			return response.end();
+
+			/** TODO: [VT] 06.08.2021, 12:49: Проверка на занятый email */
 		} else if (!validator.isEmail(body.email)) {
 			response.status(412);
 			response.json({message: 'Почта введена некорректно'})
@@ -62,6 +64,7 @@ export class UserController {
 
 		this.fileService.set(users);
 
+		/** TODO: [VT] 06.08.2021, 12:50: В ответе не должно пароля */
 		response.json(user);
 
 		return response.status(201).send();
@@ -95,7 +98,6 @@ export class UserController {
 
 		}
 
-		/** TODO: + [VT] 04.08.2021, 16:53: Не должно быть возможности изменить пароль и токен. */
 		delete body.token
 		delete body.password
 
@@ -103,7 +105,6 @@ export class UserController {
 
 		this.fileService.set(users);
 
-		/** TODO: + [VT] 05.08.2021, 16:49: status */
 		return response.status(200).send();
 	}
 
@@ -116,14 +117,16 @@ export class UserController {
 		const current: UserEntity = users.find(user => user.email === body.email);
 
 		if (!current) {
+			/** TODO: [VT] 06.08.2021, 12:52: Описать ошибку */
 			return response.status(404)
 		}
 
-		/** TODO: + [VT] 05.08.2021, 16:51: Строгое сравнение + md5 */
+		/** TODO: [VT] 06.08.2021, 12:48: Проверять user.enabled */
 		if (md5(body.password) === current.password) {
 
 			console.log("Данные корректны")
 
+			/** TODO: [VT] 06.08.2021, 12:52: Не тут */
 			const tokenKey = '1a2b-3c4d-5e6f-7g8h'
 
 			current.token = jwt.sign({exp: Math.floor(Date.now() / 1000) + (60 * 60) * 4, id: current.id}, tokenKey)
